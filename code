@@ -1,0 +1,158 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime, time
+
+# Page Configuration
+st.set_page_config(
+    page_title="The Rustic Bistro",
+    page_icon="🍽️",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
+
+# Initialize Session State for Reservations Database
+if "reservations" not in st.session_state:
+    st.session_state.reservations = [
+        {"Name": "Aarav Sharma", "Date": "2026-10-15", "Time": "19:30", "Guests": 4, "Status": "Confirmed"},
+        {"Name": "Priya Patel", "Date": "2026-10-16", "Time": "20:00", "Guests": 2, "Status": "Pending"}
+    ]
+
+# Sidebar Navigation (User View vs Admin Dashboard)
+st.sidebar.title("Navigation")
+app_mode = st.sidebar.radio("Go to:", ["Customer Landing Page", "Admin Dashboard"])
+
+# ================= CUSTOMER LANDING PAGE =================
+if app_mode == "Customer Landing Page":
+    st.title("🍽️ The Rustic Bistro")
+    st.markdown("### *Farm-to-Table, Handcrafted with Love.*")
+    st.image(
+        "https://unsplash.com", 
+        caption="Join us for an unforgettable culinary journey.", 
+        use_container_width=True
+    )
+
+    st.markdown("---")
+
+    # About & Hours
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("📆 Hours & Location")
+        st.markdown("""
+        * **Monday - Friday:** 11:00 AM - 10:00 PM
+        * **Saturday - Sunday:** 10:00 AM - 11:00 PM
+        * 📍 **Find Us:** 123 Gourmet Avenue, Foodville
+        """)
+    with col2:
+        st.subheader("✨ Our Philosophy")
+        st.write(
+            "At The Rustic Bistro, we believe in sustainable, locally sourced ingredients. "
+            "Every dish is crafted from scratch by our passionate culinary team to bring out "
+            "the freshest flavours of the season."
+        )
+
+    st.markdown("---")
+
+    # Interactive Digital Menu
+    st.subheader("📖 Explore Our Menu")
+    menu_category = st.radio(
+        "Select a Category:", 
+        ["All Items", "Appetizers", "Mains", "Desserts & Drinks"],
+        horizontal=True
+    )
+
+    menu_data = [
+        {"Name": "Truffle Fries", "Category": "Appetizers", "Price": "₹350", "Description": "Crispy golden fries tossed in white truffle oil and parmesan."},
+        {"Name": "Bruschetta Platter", "Category": "Appetizers", "Price": "₹420", "Description": "Toasted ciabatta topped with heirloom tomatoes, garlic, and fresh basil."},
+        {"Name": "Pan-Seared Salmon", "Category": "Mains", "Price": "₹1,250", "Description": "Served over a bed of wild mushroom risotto and asparagus."},
+        {"Name": "Classic Ribeye Steak", "Category": "Mains", "Price": "₹1,450", "Description": "Prime cut ribeye with garlic herb butter and rosemary roasted potatoes."},
+        {"Name": "Artisanal Woodfired Pizza", "Category": "Mains", "Price": "₹750", "Description": "Fresh mozzarella, San Marzano tomatoes, and extra virgin olive oil."},
+        {"Name": "Warm Molten Lava Cake", "Category": "Desserts & Drinks", "Price": "₹450", "Description": "Rich chocolate cake with an oozy center, served with vanilla bean gelato."},
+        {"Name": "Signature House Mocktail", "Category": "Desserts & Drinks", "Price": "₹280", "Description": "Fresh muddled berries, mint, lime juice, and a splash of sparkling water."}
+    ]
+    df_menu = pd.DataFrame(menu_data)
+
+    filtered_df = df_menu if menu_category == "All Items" else df_menu[df_menu["Category"] == menu_category]
+
+    for index, row in filtered_df.iterrows():
+        m_col1, m_col2 = st.columns([3, 1])
+        with m_col1:
+            st.markdown(f"**{row['Name']}**")
+            st.caption(row["Description"])
+        with m_col2:
+            st.markdown(f"<span style='color:green;'><b>{row['Price']}</b></span>", unsafe_allow_html=True)
+        st.markdown("<div style='border-bottom: 1px dashed #ddd; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Live Booking Calendar & Form
+    st.subheader("📅 Book Your Table Table")
+    with st.form("booking_form", clear_on_submit=True):
+        name = st.text_input("Full Name *")
+        email = st.text_input("Email Address *")
+        
+        b_col1, b_col2, b_col3 = st.columns(3)
+        with b_col1:
+            booking_date = st.date_input("Select Date", min_value=datetime.today())
+        with b_col2:
+            booking_time = st.time_input("Select Time", value=time(19, 0))
+        with b_col3:
+            guests = st.number_input("Number of Guests", min_value=1, max_value=20, value=2)
+            
+        special_requests = st.text_area("Special Requests / Dietary Restrictions (Optional)")
+        submit_booking = st.form_submit_button("Confirm Booking Request")
+        
+        if submit_booking:
+            if name and email:
+                new_booking = {
+                    "Name": name,
+                    "Date": str(booking_date),
+                    "Time": booking_time.strftime("%H:%M"),
+                    "Guests": int(guests),
+                    "Status": "Pending"
+                }
+                st.session_state.reservations.append(new_booking)
+                st.success(f"Thank you, {name}! Your table reservation request for {guests} guests on {booking_date} at {booking_time.strftime('%I:%M %p')} has been sent to our team.")
+            else:
+                st.error("Please fill in your name and email address to book a table.")
+
+    st.markdown("<br><center><p style='color: gray;'>© 2026 The Rustic Bistro. All Rights Reserved.</p></center>", unsafe_allow_html=True)
+
+# ================= ADMIN DASHBOARD =================
+elif app_mode == "Admin Dashboard":
+    st.title("🔑 Restaurant Admin Dashboard")
+    
+    # Simple Admin Authentication Barrier
+    password = st.text_input("Enter Admin Password to Access", type="password")
+    if password == "bistro123":
+        st.success("Access Granted.")
+        
+        st.subheader("📈 Current Table Reservations")
+        if len(st.session_state.reservations) > 0:
+            df_res = pd.DataFrame(st.session_state.reservations)
+            
+            # Metrics
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Total Bookings", len(df_res))
+            m2.metric("Pending Approvals", len(df_res[df_res["Status"] == "Pending"]))
+            m3.metric("Total Expected Guests", int(df_res["Guests"].sum()))
+            
+            # Interactive Data Table View
+            st.dataframe(df_res, use_container_width=True)
+            
+            # Simple Action Tool to Update Statuses
+            st.markdown("### Update Booking Status")
+            booking_names = [res["Name"] for res in st.session_state.reservations]
+            selected_guest = st.selectbox("Select Guest to Update:", booking_names)
+            new_status = st.selectbox("Set Status To:", ["Pending", "Confirmed", "Cancelled"])
+            
+            if st.button("Save Status Update"):
+                for res in st.session_state.reservations:
+                    if res["Name"] == selected_guest:
+                        res["Status"] = new_status
+                        st.success(f"Updated status for {selected_guest} to {new_status}!")
+                        st.rerun()
+        else:
+            st.info("No reservations found.")
+            
+    elif password != "":
+        st.error("Incorrect password. Please try again.")
